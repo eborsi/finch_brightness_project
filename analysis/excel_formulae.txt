@@ -1,3 +1,0 @@
-entry_raw=(K2-((M2+O2)/2))*COS(Q2)+(-L2-((-N2-P2)/2))*SIN(Q2)
-entry=K2/((R2-P2)/2)
-theta=ATAN((-P2+N2)/(O2-M2))
