@@ -6,7 +6,8 @@
 Read below for a description of the contents of `raw_data.csv`:
 
 ## Rows
-Each row corresponds to one instance of a bird flying through the tunnel from the interior aviary, as observed by the experimenter and recorded with 2 video cameras (ZCAM E2).
+Each row corresponds to one instance of a bird flying through the tunnel from the interior aviary, as observed by the experimenter and recorded with 2 video cameras (ZCAM E2).\
+Rows with missing values reflect instances where we were unable to determine one or more of the variables from the video playback (e.g. the video recording was obscured, corrupted, cut, or lost) and instances where the bird's trajectory was incomplete (e.g. the bird landed in the tunnel).
 
 ## Columns:
 
