@@ -1,4 +1,4 @@
-Treatment,Date,Reel,Session (CamA),Minute,Time stamp,Origin,Arrival,Follower,Sex,X,Y,X_left,Y_left,X_right,Y_right,theta,Entry_raw,Entry,Notes
+Treatment,Date,Reel,Session,Minute,Timestamp,Origin,Arrival,Follower,Sex,X,Y,X_left,Y_left,X_right,Y_right,theta,Entry_raw,Entry,Notes
 Bright-Dark,07/05/2021,6,1,15,1,Right,Left,,F,2043,1635,1583,1652,2272,1663,-0.0160,115.1261126,0.334183201,
 Bright-Dark,07/05/2021,6,1,15,1,Right,Left,1,,,,,,,,,,,
 Bright-Dark,07/05/2021,6,1,15,1,Right,Left,2,,,,,,,,,,,
