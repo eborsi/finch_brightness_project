@@ -1,0 +1,289 @@
+---
+title: "Analysis"
+author: "Emma Borsier"
+date: "15/02/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+## Load the dataset
+
+```{r loading}
+setwd("~/Oxford/Flight_group")
+library("readxl")
+library("ggplot2")
+df_na <- read_excel("raw_data.xlsx", sheet = 1)
+
+
+```
+
+We remove the rows with missing values in the 'Entry' column, then convert the categorical 'Treatment' column to a factor with four levels (for each of the four brightness conditions).
+```{r preprocessing}
+df <- subset(df_na,!(is.na(Entry)))
+df$Treatment <- factor(df$Treatment, levels=unique(df$Treatment))
+```
+
+
+We then make subsets of the complete dataset for each of the four brightness conditions / Treatments:
+```{r subsets}
+right_bright_df <- subset(df, Treatment=="Dark-Bright")
+left_bright_df <- subset(df, Treatment=="Bright-Dark")
+bright_df <- subset(df, Treatment=="Bright-Bright")
+dark_df <- subset(df, Treatment=="Dark-Dark")
+
+```
+
+## Histograms
+
+We plot the distribution of the horizontal position of the birds as they first enter the tunnel for the whole dataset, then for each of the four brightness conditions individually. \
+On the x-axis, -1 represents the left edge, 0 the middle, and 1 the right edge of the tunnel entrance. 
+```{r histograms, echo=FALSE}
+
+hist(df$Entry,
+     main="All conditions", 
+     xlab="Horizontal position",
+     breaks=10,
+     xlim=c(-1,1),
+     ylim=c(0,100),
+     las=1)
+hist(bright_df$Entry,
+     main="Bright (symmetric)", 
+     xlab="",
+     breaks=10,
+     col="#FFFC90",
+     xlim=c(-1,1),
+     ylim=c(0,25),
+     las=1)
+hist(dark_df$Entry,
+     main="Dark (symmetric)", 
+     xlab="Entry",
+     breaks=6,
+     col="#585858",
+     xlim=c(-1,1),
+     ylim=c(0,25),
+     las=1)
+hist(right_bright_df$Entry,
+     main="Bright on the right", 
+     xlab="",
+     col="#97D4C4",
+     breaks=10,
+     xlim=c(-1,1),
+     ylim=c(0,25),
+     las=1)
+hist(left_bright_df$Entry,
+     main="Bright on the left", 
+     xlab="",
+     breaks=10,
+     col="#EF85E5",
+     xlim=c(-1,1),
+     ylim=c(0,25),
+     las=1)
+
+```
+
+
+## Modality
+
+The distributions shown above do not appear to all be be unimodal, thus, we conducted a Hartigan's dip test to test for unimodality of the data for each brightness condition. 
+```{r modality}
+
+library(diptest) # package used to compute Hartigan's dip test 
+library(multimode) # package used to compute the mode(s) of the entry point, which is a continuous variable 
+
+dip.test(bright_df$Entry)
+bright_modes <- locmodes(bright_df$Entry, mod0 = 2, display=TRUE, addplot=FALSE, addLegend=FALSE)
+bright_modes
+
+dip.test(dark_df$Entry)
+dark_modes <- locmodes(dark_df$Entry, mod0 = 2, display=TRUE, addplot=FALSE, addLegend=FALSE)
+dark_modes
+
+dip.test(left_bright_df$Entry)
+right_bright_modes <- locmodes(right_bright_df$Entry, mod0 = 2, display=TRUE, addplot=FALSE, addLegend=FALSE)
+right_bright_modes
+
+dip.test(right_bright_df$Entry)
+left_bright_modes <- locmodes(left_bright_df$Entry, mod0 = 1, display=TRUE, addplot=FALSE, addLegend=FALSE)
+
+```
+
+
+## Effects of brightness condition on Origin side
+
+```{r Origin table}
+# We exclude the ambiguous data points for Origin from the analysis
+Origin_table <- with(subset(df, Origin!='?'), table(Treatment, Origin))
+Origin_table
+
+```
+
+
+We plot the frequencies (relative to the total of recorded flights)
+```{r origin_freqplot, echo=FALSE}
+Origin_table <- prop.table(with(df, table(Treatment, Origin)), margin=1)
+Origin_df <- subset(as.data.frame(Origin_table), Origin!='?')
+Origin_df$Freq_percent = Origin_df$Freq*100
+
+### Origin freq plot:
+ggplot(Origin_df, aes(factor(Treatment), Freq_percent, fill = Origin)) +
+        geom_col(position = 'dodge') +
+         coord_cartesian( ylim = c(0, 100))+
+        labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
+        scale_fill_manual(values = c("#F89933", "#F5D0A9"))
+```
+
+
+## Effects of brightness condition on Arrival side
+
+```{r arrival table}
+# We exclude the ambiguous data points for Arrival from the analysis
+Arrival_table <- with(subset(df, Arrival!='?'), table(Treatment, Arrival))
+Arrival_table
+chisq.test(Arrival_table)
+
+```
+
+
+```{r arrival_freqplot, echo=FALSE}
+Arrival_table <- prop.table(with(df, table(Treatment, Arrival)), margin=1)
+Arrival_df <- subset(as.data.frame(Arrival_table), Arrival!='?')
+Arrival_df$Freq_percent = Arrival_df$Freq*100
+
+### Arrival freq plot:
+ggplot(Arrival_df, aes(factor(Treatment), Freq_percent, fill = Arrival)) +
+        geom_col(position = 'dodge') +
+         coord_cartesian( ylim = c(0, 100))+
+        labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
+        scale_fill_manual(values = c("#2995d6","#9FC9EB")) 
+        #geom_errorbar(aes(ymin=))
+
+```
+
+
+## Effect of brightness condition on entry after grouping data by origin
+
+```{r brightness boxplot, echo=FALSE}
+
+q <- ggplot(subset(df, (Origin!='?' & Arrival!='?')), 
+            aes(x=Origin, y=Entry, fill=Treatment)) + 
+  geom_boxplot(alpha = 1) + scale_fill_manual(values = c("#EF85E5", "#97D4C4","#FFFC90","#716F6F")) +
+  scale_y_continuous(limits = c(-1,1)) 
+
+contrast_boxplot <- q + theme(
+  panel.background = element_rect(fill='transparent'),
+  plot.background = element_rect(fill='transparent', color=NA),
+  panel.grid.major = element_blank(), #element_line(color='grey'),
+  panel.grid.minor = element_blank(),
+  legend.background = element_rect(fill='transparent'),
+  legend.box.background = element_rect(fill='transparent'),
+) 
+contrast_boxplot
+```
+
+
+## Effect of arrival side on entry after grouping data by origin
+
+
+```{r arrival boxplot, echo=FALSE}
+q <- ggplot(subset(df, (Origin!='?' & Arrival!='?')), aes(x=Origin, y=Entry, fill=Arrival)) + 
+  geom_boxplot(alpha=1)+ scale_fill_manual(values = c("#2995d6","#9FC9EB"))+
+  scale_y_continuous(limits = c(-1,1)) 
+
+ori_boxplot <- q + theme(
+  panel.background = element_rect(fill='transparent'),
+  plot.background = element_rect(fill='transparent', color=NA),
+  panel.grid.major = element_blank(), #element_line(color='grey'),
+  panel.grid.minor = element_blank(),
+  legend.background = element_rect(fill='transparent'),
+  legend.box.background = element_rect(fill='transparent'),
+) 
+ori_boxplot
+
+```
+
+# Statistical analysis
+
+## Check for normality of data
+
+```{r normality}
+
+# check for normality of (sub-)groups
+
+model <- lm(Entry ~ Origin + Treatment + Arrival, data = df)
+res <- resid(model)
+plot(fitted(model), res)
+qqnorm(res)
+qqline(res)
+plot(density(res))
+
+```
+
+## Categorical data analysis
+
+### Chi-squared test to test the effect of the brightness condition on the preferred side of Origin
+```{r chi_test}
+# We exclude the ambiguous data points for Arrival from the analysis
+Origin_table <- with(subset(df, Origin!='?'), table(Treatment, Origin))
+Origin_table
+chisq.test(Origin_table)
+
+```
+
+### Chi-squared test to test the effect of the brightness condition on the preferred side of Arrival
+
+```{r chi_test2}
+# We exclude the ambiguous data points for Arrival from the analysis
+Arrival_table <- with(subset(df, Arrival!='?'), table(Treatment, Arrival))
+Arrival_table
+chisq.test(Arrival_table)
+```
+
+## Continuous data analysis
+
+### Two-sample t-test to test the effect of Origin on the point of Entry
+```{r t_test}
+# t-test
+
+t.test(Entry ~ Origin, data = subset(df,Origin!='?'), var.equal = TRUE, paired = FALSE, alternative="two.sided")
+```
+
+```{r means_sd, echo=FALSE}
+
+right_ori_df = subset(df,Origin=='Right')
+n_right = nrow(right_ori_df)
+mean_right = mean(right_ori_df$Entry)
+sd_right = sd(right_ori_df$Entry)
+sprintf("Birds originating from the right tended to enter to the right of centre (φ = %f ± %f; mean ± s.d; n = %i)", mean_right, sd_right, n_right)
+
+left_ori_df = subset(df,Origin=='Left')
+mean_left = mean(left_ori_df$Entry)
+n_left = nrow(left_ori_df)
+sd_left = sd(left_ori_df$Entry)
+sprintf("Birds originating from the left tended to enter to the left of centre (φ = %f ± %f; mean ± s.d; n = %i)", mean_left, sd_left, n_left)
+```
+
+
+### ANOVA
+
+Checking for any significant interaction between the effect of Origin side and the effect of the brightness condition:
+
+```{r anova1}
+# 2-way ANOVA with data grouped by Treatment (brightness) and Origin 
+anova_brightness <- aov(Entry ~ Origin*Treatment, data = subset(df,Origin!='?' & Arrival!='?'& (Treatment=='Dark-Bright' | Treatment=='Bright-Dark')))
+summary(anova_brightness)
+```
+
+Checking for any significant interaction between the effect of Origin side and the effect of Arrival side:
+
+```{r anova2}
+# 2-way ANOVA with data grouped by Arrival and Origin
+anova_arrival <- aov(Entry ~ Origin*Arrival, data = subset(df, (Origin!='?' & Arrival!='?')))
+summary(anova_arrival)
+
+```
+
+
+
