@@ -1,7 +1,7 @@
----
+set---
 title: "Analysis"
 author: "Emma Borsier"
-date: "15/02/2023"
+date: "23/02/2023"
 output: html_document
 ---
 
@@ -9,21 +9,22 @@ output: html_document
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
 ```
 
-## Load the dataset
-
-```{r loading}
-setwd("~/Oxford/Flight_group")
+```{r import_libraries, echo=FALSE}
 library("readxl")
 library("ggplot2")
-df_na <- read_excel("raw_data.xlsx", sheet = 1)
-
-
 ```
 
-We remove the rows with missing values in the 'Entry' column, then convert the categorical 'Treatment' column to a factor with four levels (for each of the four brightness conditions).
+## Load the dataset
+
+```{r import_data}
+df_csv <- read.csv("../data/raw_data.csv")
+```
+
+We remove the rows with missing values in the 'Entry' column, then convert the categorical 'Treatment'  column to a factor with four levels (for each of the four brightness conditions).
 ```{r preprocessing}
-df <- subset(df_na,!(is.na(Entry)))
+df <- subset(df_csv,!(is.na(Entry)))
 df$Treatment <- factor(df$Treatment, levels=unique(df$Treatment))
+
 ```
 
 
@@ -107,6 +108,7 @@ right_bright_modes
 
 dip.test(right_bright_df$Entry)
 left_bright_modes <- locmodes(left_bright_df$Entry, mod0 = 1, display=TRUE, addplot=FALSE, addLegend=FALSE)
+left_bright_modes
 
 ```
 
@@ -120,19 +122,24 @@ Origin_table
 
 ```
 
+We use this table to compute the proportions of Left and Right origin for each brightness Treatment. We then find the confidence intervals for these proportions using the method of Agresti and Coull, computed in Excel. We import the lower and upper bounds of these intervals from the Excel file named 'barplots_CI_tables.xlsx':
 
-We plot the frequencies (relative to the total of recorded flights)
-```{r origin_freqplot, echo=FALSE}
-Origin_table <- prop.table(with(df, table(Treatment, Origin)), margin=1)
-Origin_df <- subset(as.data.frame(Origin_table), Origin!='?')
-Origin_df$Freq_percent = Origin_df$Freq*100
+```{r import_ori_table}
+origin_freq_df <- read_excel("barplots_CI_tables.xlsx", sheet = 2)
+origin_freq_df$Treatment <- factor(origin_freq_df$Treatment, 
+                                   levels=c("Left", "Right", "Bright", "Dark"))
+```
 
-### Origin freq plot:
-ggplot(Origin_df, aes(factor(Treatment), Freq_percent, fill = Origin)) +
-        geom_col(position = 'dodge') +
-         coord_cartesian( ylim = c(0, 100))+
-        labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
-        scale_fill_manual(values = c("#F89933", "#F5D0A9"))
+We plot the proportions of flights originating from the left vs right (relative to the total of recorded flights), with the confidence intervals obtained above. 
+
+```{r plot_ori_freq, echo=FALSE}
+ggplot(origin_freq_df, aes(x=Treatment, y=Frequency, fill = Origin)) +
+      geom_bar(stat="identity", position='dodge')+
+      coord_cartesian( ylim = c(0, 100))+
+      labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
+      scale_fill_manual(values = c("#F89933", "#F5D0A9"))+
+      geom_errorbar( aes(ymin=Freq_lower, ymax=Freq_upper),
+                     position=position_dodge(0.9), width=.15,)
 ```
 
 
@@ -142,26 +149,27 @@ ggplot(Origin_df, aes(factor(Treatment), Freq_percent, fill = Origin)) +
 # We exclude the ambiguous data points for Arrival from the analysis
 Arrival_table <- with(subset(df, Arrival!='?'), table(Treatment, Arrival))
 Arrival_table
-chisq.test(Arrival_table)
-
 ```
 
+Similarly, we use the above table to compute the proportions of Left and Right arrivals for each brightness Treatment. Once again, we then find the confidence intervals for these proportions using the method of Agresti and Coull, computed in Excel. We import the lower and upper bounds of these intervals from the same Excel file:
 
-```{r arrival_freqplot, echo=FALSE}
-Arrival_table <- prop.table(with(df, table(Treatment, Arrival)), margin=1)
-Arrival_df <- subset(as.data.frame(Arrival_table), Arrival!='?')
-Arrival_df$Freq_percent = Arrival_df$Freq*100
-
-### Arrival freq plot:
-ggplot(Arrival_df, aes(factor(Treatment), Freq_percent, fill = Arrival)) +
-        geom_col(position = 'dodge') +
-         coord_cartesian( ylim = c(0, 100))+
-        labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
-        scale_fill_manual(values = c("#2995d6","#9FC9EB")) 
-        #geom_errorbar(aes(ymin=))
-
+```{r import_arr_table}
+arrival_freq_df <- read_excel("barplots_CI_tables.xlsx", sheet = 1)
+arrival_freq_df$Treatment <- factor(arrival_freq_df$Treatment, 
+                                   levels=c("Left", "Right", "Bright", "Dark"))
 ```
 
+We plot the proportions of flights arriving on the left vs right (relative to the total of recorded flights), with the confidence intervals obtained above. 
+
+```{r plot_arr_freq, echo=FALSE}
+ggplot(arrival_freq_df, aes(x=Treatment, y=Frequency, fill = Arrival)) +
+      geom_bar(stat="identity", position='dodge')+
+      coord_cartesian( ylim = c(0, 100))+
+      labs(x = "Brightness condition", y = 'Relative frequencies (%)') +
+      scale_fill_manual(values = c("#2995d6","#9FC9EB")) +
+      geom_errorbar( aes(ymin=Freq_lower, ymax=Freq_upper),
+                     position=position_dodge(0.9), width=.15,)
+```
 
 ## Effect of brightness condition on entry after grouping data by origin
 
@@ -206,24 +214,51 @@ ori_boxplot
 
 # Statistical analysis
 
-## Check for normality of data
+## Check for normality of data distribution
 
-```{r normality}
 
-# check for normality of (sub-)groups
+```{r plot_fn, echo=FALSE}
 
-model <- lm(Entry ~ Origin + Treatment + Arrival, data = df)
-res <- resid(model)
-plot(fitted(model), res)
-qqnorm(res)
-qqline(res)
-plot(density(res))
-
+plot_residuals <- function(model) {
+  res <- resid(origin_lm)
+  plot(fitted(origin_lm), res)
+  qqnorm(res)
+  qqline(res)
+  plot(density(res))
+}
 ```
+
+First, we look at the distribution of residuals for the simplest linear model: Entry ~ Origin
+
+```{r normality_lm1}
+origin_lm <- lm(Entry ~ Origin, data = df)
+plot_residuals(origin_lm)
+```
+
+Then, we look at the distribution of residuals for the following two way ANOVA (in Statistical Analysis section):
+Entry ~ Origin*Treatment
+
+```{r normality_lm2}
+ori_treatment_lm <- lm(Entry ~ Origin*Treatment, data = df)
+plot_residuals(ori_treatment_lm)
+```
+
+Finally, we look at the distribution of residuals for the following two way ANOVA (in Statistical Analysis section):
+Entry ~ Origin*Arrival
+
+```{r normality_lm3}
+arr_treatment_lm <- lm(Entry ~ Origin*Arrival, data = df)
+plot_residuals(plot_residuals(ori_treatment_lm))
+```
+
+#### Conclusion:
+The residuals of these 3 linear models are approximately normally distributed, but with a small number of outliers attributable to cases where the bird entered the tunnel on the opposite side to the model’s prediction
+
 
 ## Categorical data analysis
 
-### Chi-squared test to test the effect of the brightness condition on the preferred side of Origin
+### Chi-squared test
+Testing for an effect of the brightness condition on the preferred side of Origin
 ```{r chi_test}
 # We exclude the ambiguous data points for Arrival from the analysis
 Origin_table <- with(subset(df, Origin!='?'), table(Treatment, Origin))
@@ -232,8 +267,8 @@ chisq.test(Origin_table)
 
 ```
 
-### Chi-squared test to test the effect of the brightness condition on the preferred side of Arrival
-
+### Chi-squared test 
+Testing for an effect of the brightness condition on the preferred side of Arrival
 ```{r chi_test2}
 # We exclude the ambiguous data points for Arrival from the analysis
 Arrival_table <- with(subset(df, Arrival!='?'), table(Treatment, Arrival))
@@ -243,10 +278,9 @@ chisq.test(Arrival_table)
 
 ## Continuous data analysis
 
-### Two-sample t-test to test the effect of Origin on the point of Entry
+### Two-sample t-test 
+Checking for any significant effect of Origin on the point of Entry
 ```{r t_test}
-# t-test
-
 t.test(Entry ~ Origin, data = subset(df,Origin!='?'), var.equal = TRUE, paired = FALSE, alternative="two.sided")
 ```
 
@@ -266,20 +300,20 @@ sprintf("Birds originating from the left tended to enter to the left of centre (
 ```
 
 
-### ANOVA
+### Two-way ANOVAs
 
-Checking for any significant interaction between the effect of Origin side and the effect of the brightness condition:
+1. Checking for any significant interaction between the effect of Origin side and the effect of the brightness condition:
 
 ```{r anova1}
-# 2-way ANOVA with data grouped by Treatment (brightness) and Origin 
+# 2-way ANOVA with Treatment (brightness) and Origin as factors + their interaction
 anova_brightness <- aov(Entry ~ Origin*Treatment, data = subset(df,Origin!='?' & Arrival!='?'& (Treatment=='Dark-Bright' | Treatment=='Bright-Dark')))
 summary(anova_brightness)
 ```
 
-Checking for any significant interaction between the effect of Origin side and the effect of Arrival side:
+2. Checking for any significant interaction between the effect of Origin side and the effect of Arrival side:
 
 ```{r anova2}
-# 2-way ANOVA with data grouped by Arrival and Origin
+# 2-way ANOVA with Arrival and Origin as factors + their interaction
 anova_arrival <- aov(Entry ~ Origin*Arrival, data = subset(df, (Origin!='?' & Arrival!='?')))
 summary(anova_arrival)
 
