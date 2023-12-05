@@ -1,7 +1,7 @@
 
 # README 
 
-`raw_data.csv` ([link to file](https://github.com/eborsi/finch_brightness_project/blob/main/analysis/raw_data.csv)) contains 18 columns and 600 rows (599 data rows + 1 header row).
+`raw_data.csv` ([link to file](https://github.com/eborsi/finch_brightness_project/blob/main/data/raw_data.csv)) contains 18 columns and 590 rows (589 data rows + 1 header row).
 
 Read below for a description of the contents of `raw_data.csv`:
 
