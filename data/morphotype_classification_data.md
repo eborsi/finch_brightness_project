@@ -14,7 +14,7 @@ Only the instances which were included in the subsequent analysis (in `..\analys
    
 3. **Datetime** (*numerical*): the date and time of recording for each flight in the format `YYYYMMDDHHMMSS`
 
-4. **Session** (*numerical*): recording number within the reel (automatically incremented by the camera for each new recording).
+4. **Session** (*numerical*): number associated to the video camera's metadata and file naming (automatically incremented by the camera for each new recording).
 
 5. **Minute** (*numerical*): time (in minutes passed since the start of recording) when a bird was observed crossing the tunnel by the experimenter. 
 
