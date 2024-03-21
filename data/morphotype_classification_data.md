@@ -18,7 +18,7 @@ Only the instances which were included in the subsequent analysis (in `..\analys
 
 5. **Minute** (*numerical*): time (in minutes passed since the start of recording) when a bird was observed crossing the tunnel by the experimenter. 
 
-6. **Treatment** (*categorical*): Category corresponding to the brightness condition as seen by looking through the tunnel, named as "A", "B", "C", and "D" so that the research technician who conducted the morphotype classification was blind to the conditions.
+6. **Treatment** (*categorical*): Category corresponding to the brightness condition as seen by looking through the tunnel, with letters as names so that the research technician who conducted the morphotype classification was blind to the conditions.
 Can take four values:
 - `A` for "Bright to the left": A blackout curtain is placed on the right, while the left side is bright.
 - `B` for "Bright to the right": A blackout curtain is placed on the left, while the right side is bright.
